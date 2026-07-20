@@ -39,6 +39,38 @@ let playTimer = null;
 
 const fallback = details.layer;
 const getDetail = key => details[key] || fallback;
+const formulaTex = {
+  tokens: String.raw`\mathrm{text}\rightarrow[\mathrm{id}_1,\mathrm{id}_2,\ldots,\mathrm{id}_T]`,
+  tokenEmbedding: String.raw`E_{\mathrm{token}}=W_E[\mathrm{token\_id}]`,
+  positionEncoding: String.raw`X_0=E_{\mathrm{token}}+E_{\mathrm{position}}`,
+  embedding: String.raw`X_0\in\mathbb{R}^{T\times d_{\mathrm{model}}}`,
+  layer: String.raw`X_l=\mathrm{Block}_l\!\left(X_{l-1}\right)`,
+  layernorm1: String.raw`\mathrm{LN}(x)=\gamma\odot\frac{x-\mu}{\sqrt{\sigma^2+\epsilon}}+\beta`,
+  q: String.raw`Q=XW_Q`,
+  wq: String.raw`W_Q\leftarrow W_Q-\eta\frac{\partial L}{\partial W_Q}`,
+  k: String.raw`K=XW_K`,
+  wk: String.raw`K=XW_K`,
+  v: String.raw`V=XW_V`,
+  wv: String.raw`V=XW_V`,
+  scores: String.raw`S=QK^\top`,
+  scale: String.raw`S_{\mathrm{scaled}}=\frac{QK^\top}{\sqrt{d_k}}`,
+  mask: String.raw`S_{ij}=-\infty,\quad \mathrm{if}\ j>i`,
+  attentionSoftmax: String.raw`A_{ij}=\frac{\exp(S_{ij})}{\sum_j\exp(S_{ij})}`,
+  weightedSum: String.raw`H_{\mathrm{head}}=\mathrm{Softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}+M\right)V`,
+  concat: String.raw`H=\mathrm{Concat}\!\left(\mathrm{head}_1,\ldots,\mathrm{head}_h\right)`,
+  wo: String.raw`H_{\mathrm{attn}}=\mathrm{Concat}\!\left(\mathrm{head}_1,\ldots,\mathrm{head}_h\right)W_O`,
+  add1: String.raw`X'=X+\mathrm{Attention}\!\left(\mathrm{LN}(X)\right)`,
+  layernorm2: String.raw`Z=\mathrm{LN}(X')`,
+  win: String.raw`H=X'W_{\mathrm{in}}+b_{\mathrm{in}}`,
+  gelu: String.raw`\mathrm{GELU}(x)\approx0.5x\left[1+\tanh\!\left(\sqrt{\frac{2}{\pi}}\left(x+0.044715x^3\right)\right)\right]`,
+  wout: String.raw`\mathrm{FFN}(X)=\mathrm{GELU}\!\left(XW_{\mathrm{in}}+b_{\mathrm{in}}\right)W_{\mathrm{out}}+b_{\mathrm{out}}`,
+  add2: String.raw`X_l=X'+\mathrm{FFN}\!\left(\mathrm{LN}(X')\right)`,
+  laterLayers: String.raw`X_N=\mathrm{Block}_N\!\left(\cdots\mathrm{Block}_2\!\left(\mathrm{Block}_1(X_0)\right)\right)`,
+  finalNorm: String.raw`H=\mathrm{LN}_f(X_N)`,
+  lmhead: String.raw`\mathrm{logits}=h_{\mathrm{last}}W_U`,
+  vocabSoftmax: String.raw`P(\mathrm{token}_i\mid\mathrm{context})=\frac{\exp(z_i/\tau)}{\sum_j\exp(z_j/\tau)}`,
+  output: String.raw`y_t\sim P(\cdot\mid y_{<t})`
+};
 const zoomGroups = {
   embedding: ["tokens", "tokenEmbedding", "positionEncoding", "embedding"],
   attention: ["layer", "layernorm1", "q", "wq", "k", "wk", "v", "wv", "scores", "scale", "mask", "attentionSoftmax", "weightedSum", "concat", "wo", "add1"],
@@ -69,7 +101,12 @@ function renderDetails(key) {
   document.getElementById("detailTitle").textContent = item.title;
   document.getElementById("detailSubtitle").textContent = item.subtitle;
   document.getElementById("detailDescription").textContent = item.description;
-  document.getElementById("detailFormula").innerHTML = item.formula;
+  const formulaNode = document.getElementById("detailFormula");
+  formulaNode.innerHTML = `\\[${formulaTex[key] || item.formula}\\]`;
+  if (window.MathJax?.typesetPromise) {
+    MathJax.typesetClear?.([formulaNode]);
+    MathJax.typesetPromise([formulaNode]);
+  }
   document.getElementById("detailDimensions").innerHTML = item.dimensions.map(([name, value]) => `<div class="dimension-row"><span>${name}</span><code>${value}</code></div>`).join("");
   document.getElementById("detailPlain").textContent = item.plain;
   document.getElementById("detailPath").innerHTML = item.path.map((label, index) => `${index ? '<span class="path-arrow">→</span>' : ''}<span class="path-chip ${index === item.active ? 'active' : ''}">${label}</span>`).join("");

@@ -512,7 +512,21 @@ button:focus-visible, [tabindex="0"]:focus-visible { outline: 2px solid #fff; ou
 .detail-description { color: #c4d4e3; font-size: 10px; line-height: 1.65; margin: 0 0 14px; }
 .detail-section { padding: 13px 0; border-top: 1px solid var(--line); }
 .detail-section h3 { color: var(--muted); font-size: 8px; text-transform: uppercase; letter-spacing: .12em; margin: 0 0 8px; }
-.formula { border: 1px dashed var(--cyan); background: rgba(45,226,230,.04); border-radius: 7px; padding: 10px; color: var(--cyan); text-align: center; font: 700 12px var(--mono); overflow-x: auto; }
+.formula {
+  border: 1px dashed var(--cyan);
+  background: rgba(45,226,230,.04);
+  border-radius: 7px;
+  padding: 10px;
+  color: var(--cyan);
+  text-align: center;
+  min-height: 46px;
+  overflow-x: auto;
+}
+.formula mjx-container {
+  margin: 0 !important;
+  color: var(--cyan);
+  font-size: 112%;
+}
 .dimensions { display: grid; gap: 5px; }
 .dimension-row { display: flex; justify-content: space-between; color: var(--muted); font-size: 8px; }
 .dimension-row code { color: var(--text); font: 8px var(--mono); }
