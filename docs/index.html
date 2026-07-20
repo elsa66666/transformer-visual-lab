@@ -36,28 +36,32 @@
       </header>
 
       <main class="workspace">
-        <aside class="stage-nav panel" aria-label="结构阶段">
+        <aside class="stage-nav panel" aria-label="Transformer 总览图">
           <div class="panel-heading">
-            <span class="eyebrow">STRUCTURE</span>
-            <h2>信息旅程</h2>
+            <span class="eyebrow">P1 OVERVIEW</span>
+            <h2>Transformer 总览</h2>
           </div>
-          <nav id="stageNav">
-            <button class="stage-item active" data-focus="tokens">
-              <span class="stage-index">01</span><span><strong>输入 Token</strong><small>切词后的离散编号</small></span>
-            </button>
-            <button class="stage-item" data-focus="embedding">
-              <span class="stage-index">02</span><span><strong>Embedding</strong><small>词义 + 位置信息</small></span>
-            </button>
-            <button class="stage-item" data-focus="layernorm1">
-              <span class="stage-index">03</span><span><strong>Transformer 层</strong><small>Attention + FFN</small></span>
-            </button>
-            <button class="stage-item" data-focus="lmhead">
-              <span class="stage-index">04</span><span><strong>Linear + Softmax</strong><small>映射到词表概率</small></span>
-            </button>
-            <button class="stage-item" data-focus="output">
-              <span class="stage-index">05</span><span><strong>预测结果</strong><small>选择下一个 Token</small></span>
-            </button>
-          </nav>
+          <div class="mini-architecture" id="stageNav">
+            <div class="mini-column">
+              <button class="mini-block mini-output interactive" data-key="output" data-focus="output">Output</button>
+              <span class="mini-flow"></span>
+              <button class="mini-block mini-softmax interactive" data-key="vocabSoftmax" data-focus="output">Softmax</button>
+              <span class="mini-flow"></span>
+              <button class="mini-block mini-linear interactive" data-key="lmhead" data-focus="output">Linear</button>
+              <span class="mini-flow"></span>
+              <div class="mini-stack">
+                <span class="mini-repeat">N×</span>
+                <button class="mini-block mini-norm interactive" data-key="layernorm2" data-focus="ffn">Add & Norm</button>
+                <button class="mini-block mini-ffn interactive" data-key="win" data-focus="ffn">Feed Forward</button>
+                <button class="mini-block mini-norm interactive" data-key="add1" data-focus="attention">Add & Norm</button>
+                <button class="mini-block mini-attn active interactive" data-key="q" data-focus="attention">Multi-Head Attention</button>
+              </div>
+              <span class="mini-flow"></span>
+              <button class="mini-block mini-embed interactive" data-key="embedding" data-focus="embedding">Embedding + Pos</button>
+              <span class="mini-flow"></span>
+              <button class="mini-block mini-input interactive" data-key="tokens" data-focus="embedding">Inputs</button>
+            </div>
+          </div>
 
           <div class="model-card">
             <div class="model-card-title"><span>当前示例</span><span class="status-dot">教学配置</span></div>
@@ -72,7 +76,7 @@
           </div>
           <div class="hint-card">
             <span class="mouse-icon">⌁</span>
-            <p><strong>悬停</strong>看名称<br/><strong>点击</strong>打开详细解释</p>
+            <p><strong>点击左侧模块</strong><br/>中间切换放大结构</p>
           </div>
         </aside>
 
@@ -91,7 +95,71 @@
           </div>
 
           <div class="diagram-viewport" id="diagramViewport">
-            <div class="transformer-diagram view-2d" id="transformerDiagram">
+            <div class="zoom-lab view-2d" id="transformerDiagram">
+              <section class="zoom-panel attention-zoom active" data-zoom="attention" aria-label="Multi-Head Attention 放大结构">
+                <div class="zoom-stage-label">
+                  <span class="eyebrow">P2 DETAIL</span>
+                  <h3>Multi-Head Attention</h3>
+                </div>
+                <div class="side-input interactive" data-key="layernorm1">Input X</div>
+                <div class="split-lines" aria-hidden="true"><i></i><i></i><i></i></div>
+                <div class="projection-bank">
+                  <button class="projection q interactive" data-key="q"><b>Q</b><span>XW<sub>Q</sub></span></button>
+                  <button class="projection k interactive" data-key="k"><b>K</b><span>XW<sub>K</sub></span></button>
+                  <button class="projection v interactive" data-key="v"><b>V</b><span>XW<sub>V</sub></span></button>
+                </div>
+                <div class="attention-core">
+                  <button class="matrix-card score interactive" data-key="scores">QK<sup>T</sup></button>
+                  <button class="matrix-card scale-card interactive" data-key="scale">÷√d<sub>k</sub></button>
+                  <button class="matrix-card mask-card interactive" data-key="mask">Mask</button>
+                  <button class="matrix-card soft-card interactive" data-key="attentionSoftmax">Softmax</button>
+                  <button class="matrix-card value-card interactive" data-key="weightedSum">A × V</button>
+                </div>
+                <div class="multi-heads" aria-hidden="true">
+                  <span>head 1</span><span>head 2</span><span>head 3</span><span>...</span><span>head h</span>
+                </div>
+                <button class="concat-block interactive" data-key="concat">Concat</button>
+                <button class="output-proj interactive" data-key="wo">W<sub>O</sub></button>
+                <button class="residual-sum interactive" data-key="add1">+</button>
+              </section>
+
+              <section class="zoom-panel ffn-zoom" data-zoom="ffn" aria-label="FFN 放大结构">
+                <div class="zoom-stage-label">
+                  <span class="eyebrow">P2 DETAIL</span>
+                  <h3>Position-wise FFN</h3>
+                </div>
+                <div class="ffn-source interactive" data-key="layernorm2">Input: X</div>
+                <div class="ffn-rail" aria-hidden="true"></div>
+                <button class="ffn-box up interactive" data-key="win"><b>W<sub>up</sub></b><span>d<sub>model</sub> → d<sub>ff</sub></span></button>
+                <button class="ffn-box activation interactive" data-key="gelu"><b>F</b><span>GELU / gate</span></button>
+                <button class="ffn-box hidden interactive" data-key="gelu"><b>R</b><span>activated neurons</span></button>
+                <button class="ffn-box down interactive" data-key="wout"><b>W<sub>down</sub></b><span>d<sub>ff</sub> → d<sub>model</sub></span></button>
+                <div class="neuron-strip" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+                <button class="ffn-box residual interactive" data-key="add2"><b>⊕</b><span>residual add</span></button>
+              </section>
+
+              <section class="zoom-panel embedding-zoom" data-zoom="embedding" aria-label="Embedding 放大结构">
+                <div class="zoom-stage-label">
+                  <span class="eyebrow">P2 DETAIL</span>
+                  <h3>Embedding + Position</h3>
+                </div>
+                <div class="token-ladder interactive" data-key="tokens"><span>[BOS]</span><span>小美</span><span>正在</span><span>学习</span><span>注意力</span></div>
+                <button class="embed-table interactive" data-key="tokenEmbedding"><b>W<sub>E</sub></b><span>token lookup table</span></button>
+                <button class="pos-wave-card interactive" data-key="positionEncoding"><b>Position</b><span>order signal</span></button>
+                <button class="embed-sum interactive" data-key="embedding"><b>X<sub>0</sub></b><span>E_token + E_position</span></button>
+              </section>
+
+              <section class="zoom-panel output-zoom" data-zoom="output" aria-label="输出层放大结构">
+                <div class="zoom-stage-label">
+                  <span class="eyebrow">P2 DETAIL</span>
+                  <h3>Linear + Softmax</h3>
+                </div>
+                <button class="logit-input interactive" data-key="finalNorm">h<sub>last</sub></button>
+                <button class="vocab-matrix interactive" data-key="lmhead"><b>W<sub>U</sub></b><span>d<sub>model</sub> × |Vocab|</span></button>
+                <button class="prob-cloud interactive" data-key="vocabSoftmax">Softmax probabilities</button>
+                <button class="next-token interactive" data-key="output">Next token: 的</button>
+              </section>
+              <div class="legacy-diagram" aria-hidden="true">
               <div class="tokens-row interactive" data-key="tokens" tabindex="0">
                 <span class="row-label">输入 Token</span>
                 <div class="token">[BOS]</div><div class="token">小美</div><div class="token">正在</div>
@@ -203,6 +271,7 @@
                   <span>下一个 Token</span><strong>「的」</strong>
                   <div class="probability-bars" aria-hidden="true"><i style="height:48%"></i><i style="height:82%"></i><i style="height:35%"></i><i style="height:64%"></i><i style="height:28%"></i></div>
                 </button>
+              </div>
               </div>
             </div>
           </div>

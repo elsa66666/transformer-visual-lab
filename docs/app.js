@@ -39,10 +39,31 @@ let playTimer = null;
 
 const fallback = details.layer;
 const getDetail = key => details[key] || fallback;
+const zoomGroups = {
+  embedding: ["tokens", "tokenEmbedding", "positionEncoding", "embedding"],
+  attention: ["layer", "layernorm1", "q", "wq", "k", "wk", "v", "wv", "scores", "scale", "mask", "attentionSoftmax", "weightedSum", "concat", "wo", "add1"],
+  ffn: ["layernorm2", "win", "gelu", "wout", "add2"],
+  output: ["laterLayers", "finalNorm", "lmhead", "vocabSoftmax", "output"]
+};
+const zoomForKey = Object.fromEntries(Object.entries(zoomGroups).flatMap(([zoom, keys]) => keys.map(key => [key, zoom])));
+
+function setZoom(zoom) {
+  const nextZoom = zoom || "attention";
+  document.querySelectorAll("[data-zoom]").forEach(panel => panel.classList.toggle("active", panel.dataset.zoom === nextZoom));
+  document.querySelectorAll("[data-focus]").forEach(node => node.classList.toggle("active", node.dataset.focus === nextZoom));
+  const label = {
+    embedding: "Embedding 局部放大图",
+    attention: "Attention 局部放大图",
+    ffn: "FFN 局部放大图",
+    output: "输出层局部放大图"
+  }[nextZoom];
+  document.getElementById("viewStatus").textContent = label || "2D 教学流程图";
+}
 
 function renderDetails(key) {
   const item = getDetail(key);
   selectedKey = key;
+  setZoom(zoomForKey[key]);
   document.getElementById("detailCategory").textContent = item.category;
   document.getElementById("detailIcon").textContent = item.icon;
   document.getElementById("detailTitle").textContent = item.title;
@@ -92,7 +113,11 @@ document.querySelectorAll("[data-view]").forEach(button => {
     document.querySelectorAll("[data-view]").forEach(item => { item.classList.toggle("active", item === button); item.setAttribute("aria-pressed", item === button ? "true" : "false"); });
     diagram.classList.toggle("view-3d", view === "3d");
     diagram.classList.toggle("view-2d", view === "2d");
-    document.getElementById("viewStatus").textContent = view === "3d" ? "3D 分层透视图" : "2D 教学流程图";
+    if (view === "3d") {
+      document.getElementById("viewStatus").textContent = "3D 分层透视图";
+    } else {
+      setZoom(zoomForKey[selectedKey]);
+    }
   });
 });
 
@@ -128,9 +153,10 @@ document.getElementById("playFlow").addEventListener("click", event => {
   if (isPlaying) playTimer = setTimeout(() => button.click(), 9000);
 });
 
-document.querySelectorAll(".stage-item").forEach(button => {
+document.querySelectorAll(".stage-item, .mini-block[data-focus]").forEach(button => {
   button.addEventListener("click", () => {
     document.querySelectorAll(".stage-item").forEach(item => item.classList.toggle("active", item === button));
+    if (button.dataset.focus) setZoom(button.dataset.focus);
     const target = document.querySelector(`[data-key="${button.dataset.focus}"]`);
     if (target) {
       target.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
@@ -138,6 +164,8 @@ document.querySelectorAll(".stage-item").forEach(button => {
       void target.offsetWidth;
       target.classList.add("focus-flash");
       renderDetails(button.dataset.focus);
+    } else if (button.dataset.key) {
+      renderDetails(button.dataset.key);
     }
   });
 });
