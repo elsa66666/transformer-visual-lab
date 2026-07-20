@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#07111f" />
+    <meta name="description" content="可交互的 Transformer 2D / 3D 结构可视化，逐层理解 Q、K、V、注意力与前馈网络。" />
+    <title>Transformer 结构实验室</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="ambient ambient-a"></div>
+    <div class="ambient ambient-b"></div>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div>
+            <h1>Transformer 结构实验室</h1>
+            <p>从 Token 到预测：逐层看懂信息如何流动</p>
+          </div>
+        </div>
+        <div class="toolbar" aria-label="可视化设置">
+          <div class="segmented" role="group" aria-label="模型结构">
+            <button class="segment active" data-architecture="decoder">Decoder-only</button>
+            <button class="segment" data-architecture="encoder-decoder">Encoder–Decoder</button>
+          </div>
+          <div class="segmented view-switch" role="group" aria-label="视图模式">
+            <button class="segment active" data-view="2d" aria-pressed="true">2D</button>
+            <button class="segment" data-view="3d" aria-pressed="false">3D</button>
+          </div>
+          <button class="play-button" id="playFlow" aria-label="播放信息流">
+            <span class="play-icon">▶</span><span class="play-label">播放信息流</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="stage-nav panel" aria-label="结构阶段">
+          <div class="panel-heading">
+            <span class="eyebrow">STRUCTURE</span>
+            <h2>信息旅程</h2>
+          </div>
+          <nav id="stageNav">
+            <button class="stage-item active" data-focus="tokens">
+              <span class="stage-index">01</span><span><strong>输入 Token</strong><small>切词后的离散编号</small></span>
+            </button>
+            <button class="stage-item" data-focus="embedding">
+              <span class="stage-index">02</span><span><strong>Embedding</strong><small>词义 + 位置信息</small></span>
+            </button>
+            <button class="stage-item" data-focus="layernorm1">
+              <span class="stage-index">03</span><span><strong>Transformer 层</strong><small>Attention + FFN</small></span>
+            </button>
+            <button class="stage-item" data-focus="lmhead">
+              <span class="stage-index">04</span><span><strong>Linear + Softmax</strong><small>映射到词表概率</small></span>
+            </button>
+            <button class="stage-item" data-focus="output">
+              <span class="stage-index">05</span><span><strong>预测结果</strong><small>选择下一个 Token</small></span>
+            </button>
+          </nav>
+
+          <div class="model-card">
+            <div class="model-card-title"><span>当前示例</span><span class="status-dot">教学配置</span></div>
+            <dl>
+              <div><dt>层数 N</dt><dd>12</dd></div>
+              <div><dt>隐藏维度 d<sub>model</sub></dt><dd>768</dd></div>
+              <div><dt>注意力头 h</dt><dd>12</dd></div>
+              <div><dt>单头维度 d<sub>k</sub></dt><dd>64</dd></div>
+              <div><dt>FFN 维度 d<sub>ff</sub></dt><dd>3072</dd></div>
+              <div><dt>序列长度 T</dt><dd>9</dd></div>
+            </dl>
+          </div>
+          <div class="hint-card">
+            <span class="mouse-icon">⌁</span>
+            <p><strong>悬停</strong>看名称<br/><strong>点击</strong>打开详细解释</p>
+          </div>
+        </aside>
+
+        <section class="canvas-panel panel" aria-label="Transformer 结构图">
+          <div class="canvas-header">
+            <div>
+              <span class="eyebrow">LIVE DIAGRAM</span>
+              <h2 id="diagramTitle">Decoder-only Transformer</h2>
+            </div>
+            <div class="legend-compact" aria-label="颜色图例">
+              <span><i class="legend-q"></i>Q 查询</span>
+              <span><i class="legend-k"></i>K 键</span>
+              <span><i class="legend-v"></i>V 值</span>
+              <span><i class="legend-ffn"></i>FFN</span>
+            </div>
+          </div>
+
+          <div class="diagram-viewport" id="diagramViewport">
+            <div class="transformer-diagram view-2d" id="transformerDiagram">
+              <div class="tokens-row interactive" data-key="tokens" tabindex="0">
+                <span class="row-label">输入 Token</span>
+                <div class="token">[BOS]</div><div class="token">小美</div><div class="token">正在</div>
+                <div class="token">学习</div><div class="token">注意力</div><div class="token">机制</div><div class="token accent">▮</div>
+              </div>
+
+              <div class="flow-line vertical"><span></span></div>
+
+              <div class="embedding-row">
+                <button class="module-card embedding-card interactive" data-key="tokenEmbedding">
+                  <span class="module-kicker">LOOKUP TABLE</span><strong>Token Embedding</strong>
+                  <small>词表编号 → 词向量</small><div class="vector-bars" aria-hidden="true"></div>
+                </button>
+                <span class="plus-sign">+</span>
+                <button class="module-card position-card interactive" data-key="positionEncoding">
+                  <span class="module-kicker">POSITION</span><strong>位置编码</strong>
+                  <small>把顺序注入向量</small><div class="wave" aria-hidden="true"></div>
+                </button>
+                <span class="equals-sign">=</span>
+                <button class="tensor-pill interactive" data-key="embedding">X<sub>0</sub><span>T × d<sub>model</sub></span></button>
+              </div>
+
+              <div class="stack-label"><span>Transformer Block</span><span>重复 N 层 · 当前展开 Layer 1</span></div>
+              <section class="transformer-layer interactive-group" data-group="layer">
+                <div class="layer-badge interactive" data-key="layer">LAYER 1</div>
+
+                <div class="sublayer attention-layer">
+                  <div class="sublayer-title">
+                    <div><span class="index-badge">A</span><strong>Masked Multi-Head Self-Attention</strong></div>
+                    <small>让每个 Token 有选择地读取前文</small>
+                  </div>
+
+                  <div class="residual-path top-path" aria-hidden="true"><span>Residual</span></div>
+                  <button class="module-card norm-card interactive" data-key="layernorm1">
+                    <span class="module-kicker">PRE-NORM</span><strong>LayerNorm</strong><small>稳定数值尺度</small>
+                  </button>
+                  <div class="arrow horizontal"><span></span></div>
+
+                  <div class="qkv-grid">
+                    <div class="qkv-lane lane-q">
+                      <button class="qkv-symbol interactive" data-key="q"><b>Q</b><span>Query</span></button>
+                      <span class="matrix-op">=</span>
+                      <button class="weight-card interactive" data-key="wq"><b>W<sub>Q</sub></b><span>d<sub>model</sub> × d<sub>k</sub></span></button>
+                    </div>
+                    <div class="qkv-lane lane-k">
+                      <button class="qkv-symbol interactive" data-key="k"><b>K</b><span>Key</span></button>
+                      <span class="matrix-op">=</span>
+                      <button class="weight-card interactive" data-key="wk"><b>W<sub>K</sub></b><span>d<sub>model</sub> × d<sub>k</sub></span></button>
+                    </div>
+                    <div class="qkv-lane lane-v">
+                      <button class="qkv-symbol interactive" data-key="v"><b>V</b><span>Value</span></button>
+                      <span class="matrix-op">=</span>
+                      <button class="weight-card interactive" data-key="wv"><b>W<sub>V</sub></b><span>d<sub>model</sub> × d<sub>v</sub></span></button>
+                    </div>
+                  </div>
+
+                  <div class="attention-pipeline">
+                    <button class="operator-card interactive" data-key="scores"><b>QK<sup>T</sup></b><span>相似度打分</span></button>
+                    <span class="pipe-arrow">→</span>
+                    <button class="operator-card interactive" data-key="scale"><b>÷ √d<sub>k</sub></b><span>缩放</span></button>
+                    <span class="pipe-arrow">→</span>
+                    <button class="operator-card interactive" data-key="mask"><b>Mask</b><span>遮住未来</span></button>
+                    <span class="pipe-arrow">→</span>
+                    <button class="operator-card interactive" data-key="attentionSoftmax"><b>Softmax</b><span>注意力权重</span></button>
+                    <span class="pipe-arrow">→</span>
+                    <button class="operator-card interactive" data-key="weightedSum"><b>× V</b><span>加权取值</span></button>
+                    <span class="pipe-arrow">→</span>
+                    <button class="operator-card interactive" data-key="concat"><b>Concat</b><span>合并多头</span></button>
+                    <span class="pipe-arrow">→</span>
+                    <button class="weight-card wo-card interactive" data-key="wo"><b>W<sub>O</sub></b><span>h·d<sub>v</sub> × d<sub>model</sub></span></button>
+                  </div>
+                  <button class="add-node interactive" data-key="add1" aria-label="第一次残差相加">+</button>
+                </div>
+
+                <div class="sublayer ffn-layer">
+                  <div class="sublayer-title">
+                    <div><span class="index-badge">B</span><strong>Position-wise Feed-Forward Network</strong></div>
+                    <small>每个位置独立地做非线性加工</small>
+                  </div>
+                  <div class="residual-path bottom-path" aria-hidden="true"><span>Residual</span></div>
+                  <button class="module-card norm-card interactive" data-key="layernorm2">
+                    <span class="module-kicker">PRE-NORM</span><strong>LayerNorm</strong><small>再次归一化</small>
+                  </button>
+                  <div class="ffn-pipeline">
+                    <button class="weight-card ffn-weight interactive" data-key="win"><b>W<sub>in</sub></b><span>d<sub>model</sub> × d<sub>ff</sub></span><em>升维</em></button>
+                    <span class="pipe-arrow">→</span>
+                    <button class="operator-card activation-card interactive" data-key="gelu"><b>GELU</b><span>非线性激活</span></button>
+                    <span class="pipe-arrow">→</span>
+                    <button class="weight-card ffn-weight interactive" data-key="wout"><b>W<sub>out</sub></b><span>d<sub>ff</sub> × d<sub>model</sub></span><em>降维</em></button>
+                  </div>
+                  <button class="add-node interactive" data-key="add2" aria-label="第二次残差相加">+</button>
+                </div>
+              </section>
+
+              <div class="layer-stack" aria-label="其余 Transformer 层">
+                <button class="collapsed-layer interactive" data-key="laterLayers"><span>Layer 2</span><small>相同结构，不同参数</small></button>
+                <button class="collapsed-layer dots interactive" data-key="laterLayers">•••</button>
+                <button class="collapsed-layer interactive" data-key="laterLayers"><span>Layer N</span><small>形成最终上下文表示</small></button>
+              </div>
+
+              <div class="output-pipeline">
+                <button class="module-card output-card interactive" data-key="finalNorm"><span class="module-kicker">FINAL</span><strong>LayerNorm</strong><small>最后一次归一化</small></button>
+                <span class="pipe-arrow down">↓</span>
+                <button class="module-card output-card linear-card interactive" data-key="lmhead"><span class="module-kicker">LM HEAD</span><strong>Linear · W<sub>U</sub></strong><small>d<sub>model</sub> → |Vocab|</small></button>
+                <span class="pipe-arrow down">↓</span>
+                <button class="module-card output-card interactive" data-key="vocabSoftmax"><span class="module-kicker">PROBABILITY</span><strong>Softmax</strong><small>Logits → 概率分布</small></button>
+                <span class="pipe-arrow down">↓</span>
+                <button class="prediction-card interactive" data-key="output">
+                  <span>下一个 Token</span><strong>「的」</strong>
+                  <div class="probability-bars" aria-hidden="true"><i style="height:48%"></i><i style="height:82%"></i><i style="height:35%"></i><i style="height:64%"></i><i style="height:28%"></i></div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="canvas-footer">
+            <span><i class="pulse-dot"></i><b id="viewStatus">2D 教学流程图</b> · 模块位置与 3D 模式一一对应</span>
+            <span id="hoverHint">把光标放到任意模块上</span>
+          </div>
+        </section>
+
+        <aside class="detail-panel panel" aria-live="polite">
+          <div class="detail-topline">
+            <span class="detail-category" id="detailCategory">ATTENTION</span>
+            <span class="selected-badge">● 已选中</span>
+          </div>
+          <div class="detail-heading">
+            <div class="detail-icon" id="detailIcon">Q</div>
+            <div><h2 id="detailTitle">Q · Query（查询）</h2><p id="detailSubtitle">当前 Token 正在寻找什么？</p></div>
+          </div>
+          <p class="detail-description" id="detailDescription"></p>
+
+          <section class="detail-section">
+            <h3>核心公式</h3>
+            <div class="formula" id="detailFormula"></div>
+          </section>
+          <section class="detail-section">
+            <h3>张量形状</h3>
+            <div class="dimensions" id="detailDimensions"></div>
+          </section>
+          <section class="detail-section">
+            <h3>大白话</h3>
+            <div class="plain-card"><span class="bulb">✦</span><p id="detailPlain"></p></div>
+          </section>
+          <section class="detail-section">
+            <h3>在整层里的位置</h3>
+            <div class="path-chips" id="detailPath"></div>
+          </section>
+          <section class="detail-section example-section">
+            <h3>跑一个小例子</h3>
+            <div class="example-card" id="detailExample"></div>
+          </section>
+          <div class="keyboard-hint"><kbd>Tab</kbd> 切换模块　<kbd>Enter</kbd> 查看详情</div>
+        </aside>
+      </main>
+    </div>
+
+    <div class="tooltip" id="tooltip" role="tooltip"></div>
+    <script src="./app.js"></script>
+  </body>
+</html>
